@@ -1,5 +1,11 @@
 Changelog
 
+08/10/12 (Oliver)
+- improved ncurses interface
+- it's much less CPU intensive
+
+-------------------------------------------------
+
 31/08/10 (Arnout)
 - support for screens wider than 80 characters, thanks to Shock
   at https://bugs.launchpad.net/ubuntu/+source/nethogs/+bug/627626
