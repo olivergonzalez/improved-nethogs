@@ -30,12 +30,12 @@ install: nethogs nethogs.8
 	install -m 644 nethogs.8 $(man8)
 
 nethogs: nethogs.cpp $(OBJS)
-	$(CXX) $(CFLAGS) nethogs.cpp $(OBJS) -o nethogs -lpcap -lm -lncurses -DVERSION=\"$(VERSION)\" -DSUBVERSION=\"$(SUBVERSION)\" -DMINORVERSION=\"$(MINORVERSION)\"
+	$(CXX) $(CFLAGS) nethogs.cpp $(OBJS) -o nethogs -lrt -lpcap -lm -lncurses -lpthread -DVERSION=\"$(VERSION)\" -DSUBVERSION=\"$(SUBVERSION)\" -DMINORVERSION=\"$(MINORVERSION)\"
 nethogs_testsum: nethogs_testsum.cpp $(OBJS)
-	$(CXX) $(CFLAGS) -g nethogs_testsum.cpp $(OBJS) -o nethogs_testsum -lpcap -lm -lncurses -DVERSION=\"$(VERSION)\" -DSUBVERSION=\"$(SUBVERSION)\" -DMINORVERSION=\"$(MINORVERSION)\"
+	$(CXX) $(CFLAGS) -g nethogs_testsum.cpp $(OBJS) -o nethogs_testsum -lrt -lpcap -lm -lncurses -lpthread -DVERSION=\"$(VERSION)\" -DSUBVERSION=\"$(SUBVERSION)\" -DMINORVERSION=\"$(MINORVERSION)\"
 
 decpcap_test: decpcap_test.cpp decpcap.o
-	$(CXX) $(CFLAGS) decpcap_test.cpp decpcap.o -o decpcap_test -lpcap -lm
+	$(CXX) $(CFLAGS) decpcap_test.cpp decpcap.o -o decpcap_test -lrt -lpcap -lm -lpthread
 
 #-lefence
 

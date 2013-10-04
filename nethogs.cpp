@@ -402,7 +402,7 @@ int main (int argc, char** argv)
 		// CPU utilisation;
 		if (!packets_read)
 		{
-			usleep(100);
+			usleep(refreshdelay * 1000);
 		}
 	}
 }

@@ -1,4 +1,4 @@
-/* NetHogs console UI */
+//* NetHogs console UI */
 #include <string>
 #include <pwd.h>
 #include <sys/types.h>
@@ -24,12 +24,16 @@ extern Process * unknownip;
 // sort on sent or received?
 bool sortRecv = true;
 // viewMode: kb/s or total
+int HEADER_LINE = 0;
+int FOOTER_GAP = 1;
+int PROCESSES_LINE = 1;
 int VIEWMODE_KBPS = 0;
 int VIEWMODE_TOTAL_KB = 1;
 int VIEWMODE_TOTAL_B = 2;
 int VIEWMODE_TOTAL_MB = 3;
 int viewMode = VIEWMODE_KBPS;
 int nViewModes = 4;
+int lastTotalLine = 0;
 
 class Line
 {
@@ -85,12 +89,14 @@ void Line::show (int row, unsigned int proglen)
 		return;
 	}
 
+	int processLine = PROCESSES_LINE + row;
+	
 	if (m_pid == 0)
-		mvprintw (3+row, 0, "?");
+		mvprintw (processLine, 0, "?");
 	else
-		mvprintw (3+row, 0, "%d", m_pid);
+		mvprintw (processLine, 0, "%d", m_pid);
 	char * username = uid2username(m_uid);
-	mvprintw (3+row, 6, "%s", username);
+	mvprintw (processLine, 6, "%s", username);
 	free (username);
 	if (strlen (m_name) > proglen) {
 		// truncate oversized names
@@ -98,29 +104,29 @@ void Line::show (int row, unsigned int proglen)
 		char * start = tmp + strlen (m_name) - proglen;
 		start[0] = '.';
 		start[1] = '.';
-		mvprintw (3+row, 6 + 9, "%s", start);
+		mvprintw (processLine, 6 + 9, "%s", start);
 		free (tmp);
 	} else {
-		mvprintw (3+row, 6 + 9, "%s", m_name);
+		mvprintw (processLine, 6 + 9, "%s", m_name);
 	}
-	mvprintw (3+row, 6 + 9 + proglen + 2, "%s", devicename);
-	mvprintw (3+row, 6 + 9 + proglen + 2 + 6, "%10.3f", sent_value);
-	mvprintw (3+row, 6 + 9 + proglen + 2 + 6 + 9 + 3, "%10.3f", recv_value);
+	mvprintw (processLine, 6 + 9 + proglen + 2, "%s", devicename);
+	mvprintw (processLine, 6 + 9 + proglen + 2 + 6, "%10.3f", sent_value);
+	mvprintw (processLine, 6 + 9 + proglen + 2 + 6 + 9 + 3, "%10.3f", recv_value);
 	if (viewMode == VIEWMODE_KBPS)
 	{
-		mvprintw (3+row, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "KB/sec");
+		mvprintw (processLine, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "KB/sec");
 	}
 	else if (viewMode == VIEWMODE_TOTAL_MB)
 	{
-		mvprintw (3+row, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "MB    ");
+		mvprintw (processLine, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "MB    ");
 	}
 	else if (viewMode == VIEWMODE_TOTAL_KB)
 	{
-		mvprintw (3+row, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "KB    ");
+		mvprintw (processLine, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "KB    ");
 	}
 	else if (viewMode == VIEWMODE_TOTAL_B)
 	{
-		mvprintw (3+row, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "B     ");
+		mvprintw (processLine, 6 + 9 + proglen + 2 + 6 + 9 + 3 + 11, "B     ");
 	}
 }
 
@@ -164,6 +170,8 @@ int GreatestFirst (const void * ma, const void * mb)
 void init_ui ()
 {
 	WINDOW * screen = initscr();
+	start_color();
+	use_default_colors();
 	raw();
 	noecho();
 	cbreak();
@@ -171,6 +179,9 @@ void init_ui ()
 	caption = new std::string ("NetHogs");
 	caption->append(version);
 	//caption->append(", running at ");
+	init_pair(1, COLOR_BLACK, COLOR_GREEN);
+	init_pair(2, COLOR_BLACK, COLOR_CYAN);
+	init_pair(3, COLOR_BLUE, -1);
 }
 
 void exit_ui ()
@@ -308,10 +319,10 @@ void do_refresh()
 	int row; // number of terminal rows
 	int col; // number of terminal columns
 	unsigned int proglen; // max length of the "PROGRAM" column
-
+	
 	getmaxyx(stdscr, row, col);	 /* find the boundaries of the screeen */
 	if (col < 60) {
-		clear();
+		//clear();
 		mvprintw(0,0, "The terminal is too narrow! Please make it wider.\nI'll wait...");
 		return;
 	}
@@ -327,11 +338,18 @@ void do_refresh()
 	}
 	else
 	{
-		clear();
-		mvprintw (0, 0, "%s", caption->c_str());
-		attron(A_REVERSE);
-		mvprintw (2, 0, "  PID USER     %-*.*s  DEV        SENT      RECEIVED       ", proglen, proglen, "PROGRAM");
-		attroff(A_REVERSE);
+		// Clear all lines printed last cycle
+		for (int i = HEADER_LINE; i <= lastTotalLine; i++) {
+			move(i, 0);
+			clrtoeol();
+		}
+
+		//mvprintw (0, 0, "%s", caption->c_str());
+		char header[col];
+		sprintf(header, "  PID USER     %-*.*s  DEV        SENT      RECEIVED       ", proglen, proglen, "PROGRAM");
+		attron(COLOR_PAIR(1));
+		mvprintw (HEADER_LINE, 0, "%s", header);
+		attroff(COLOR_PAIR(1));
 	}
 	ProcList * curproc = processes;
 	ProcList * previousproc = NULL;
@@ -459,22 +477,26 @@ void do_refresh()
 	}
 
 	if ((!tracemode) && (!DEBUG)){
-		attron(A_REVERSE);
-		mvprintw (3+1+i, 0, "  TOTAL        %-*.*s        %10.3f  %10.3f ", proglen, proglen, " ", sent_global, recv_global);
+		int totalLine = PROCESSES_LINE + i + FOOTER_GAP;
+
+		attron(COLOR_PAIR(2));
+		mvprintw (totalLine, 0, "  TOTAL        %-*.*s        %10.3f  %10.3f ", proglen, proglen, " ", sent_global, recv_global);
 		if (viewMode == VIEWMODE_KBPS)
 		{
-			mvprintw (3+1+i, col - 7, "KB/sec ");
+			mvprintw (totalLine, col - 7, "KB/sec ");
 		} else if (viewMode == VIEWMODE_TOTAL_B) {
-			mvprintw (3+1+i, col - 7, "B      ");
+			mvprintw (totalLine, col - 7, "B      ");
 		} else if (viewMode == VIEWMODE_TOTAL_KB) {
-			mvprintw (3+1+i, col - 7, "KB     ");
+			mvprintw (totalLine, col - 7, "KB     ");
 		} else if (viewMode == VIEWMODE_TOTAL_MB) {
-			mvprintw (3+1+i, col - 7, "MB     ");
+			mvprintw (totalLine, col - 7, "MB     ");
 		}
-		attroff(A_REVERSE);
-		mvprintw (4+1+i, 0, "");
+
+		attroff(COLOR_PAIR(2));
+
+		lastTotalLine = totalLine;
+		//mvprintw (1+i, 0, "");
 		refresh();
 	}
 }
-
 
